@@ -109,22 +109,11 @@ export function streamText(
 
   const dynamicMaxTokens = modelDetails && modelDetails.maxTokenAllowed ? modelDetails.maxTokenAllowed : MAX_TOKENS;
 
-  // Get tools if web search is enabled
-  // Check for Tavily API key from cookies first, then fall back to environment variable
-  const tavilyApiKey = apiKeys?.Tavily || env.TAVILY_API_KEY;
-  
-  const tools = enableWebSearch !== false ? getTools({ 
-    enabled: enableWebSearch !== false,
-    tavilyApiKey
-  }) : undefined;
-
   return _streamText({
     model: getModel(currentProvider, currentModel, env, apiKeys),
     system: getSystemPrompt(undefined, mode),
     maxTokens: dynamicMaxTokens,
     messages: convertToCoreMessages(processedMessages),
-    tools,
-    maxSteps: tools ? 5 : 1,
     ...options,
   });
 }

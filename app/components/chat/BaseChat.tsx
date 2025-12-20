@@ -296,22 +296,6 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
                         setApiKey={(key) => updateApiKey(provider.name, key)}
                       />
                     )}
-                    <div className="mt-4 pt-4 border-t border-bolt-elements-borderColor">
-                      <APIKeyManager
-                        provider={{
-                          name: 'Tavily',
-                          staticModels: [],
-                          getApiKeyLink: 'https://app.tavily.com/home',
-                          labelForGetApiKey: 'Get API Key',
-                          icon: 'i-ph:magnifying-glass',
-                        }}
-                        apiKey={apiKeys.Tavily || ''}
-                        setApiKey={(key) => updateApiKey('Tavily', key)}
-                      />
-                      <div className="text-xs text-bolt-elements-textSecondary mt-1">
-                        Enable AI web search for real-time information (1,000 free searches/month)
-                      </div>
-                    </div>
                   </div>
                 </div>
 
