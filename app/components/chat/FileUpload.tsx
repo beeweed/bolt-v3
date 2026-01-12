@@ -1,5 +1,13 @@
 import { useRef, type ChangeEvent } from 'react';
-import { type FileAttachment, MAX_FILE_SIZE, ACCEPTED_FILE_TYPES, isAcceptedFileType, formatFileSize, convertFileToBase64, createFileAttachment } from '~/utils/fileUtils';
+import {
+  type FileAttachment,
+  MAX_FILE_SIZE,
+  ACCEPTED_FILE_TYPES,
+  isAcceptedFileType,
+  formatFileSize,
+  convertFileToBase64,
+  createFileAttachment,
+} from '~/utils/fileUtils';
 
 interface FileUploadProps {
   files: FileAttachment[];
@@ -30,7 +38,7 @@ export function FileUpload({ files, onFilesChange, onError, disabled = false }: 
         const base64Data = await convertFileToBase64(file);
         const attachment = createFileAttachment(file, base64Data);
         newFiles.push(attachment);
-      } catch (error) {
+      } catch {
         onError?.(`Failed to process file ${file.name}`);
       }
     }
@@ -60,11 +68,7 @@ export function FileUpload({ files, onFilesChange, onError, disabled = false }: 
               <div className="flex items-center gap-2">
                 {file.type === 'image' ? (
                   <div className="w-10 h-10 rounded overflow-hidden bg-bolt-elements-background-depth-3">
-                    <img
-                      src={file.data}
-                      alt={file.name}
-                      className="w-full h-full object-cover"
-                    />
+                    <img src={file.data} alt={file.name} className="w-full h-full object-cover" />
                   </div>
                 ) : (
                   <div className="w-10 h-10 rounded bg-bolt-elements-background-depth-3 flex items-center justify-center text-bolt-elements-textSecondary">
@@ -72,12 +76,8 @@ export function FileUpload({ files, onFilesChange, onError, disabled = false }: 
                   </div>
                 )}
                 <div className="flex flex-col">
-                  <span className="text-xs text-bolt-elements-textPrimary truncate max-w-[150px]">
-                    {file.name}
-                  </span>
-                  <span className="text-xs text-bolt-elements-textSecondary">
-                    {formatFileSize(file.size)}
-                  </span>
+                  <span className="text-xs text-bolt-elements-textPrimary truncate max-w-[150px]">{file.name}</span>
+                  <span className="text-xs text-bolt-elements-textSecondary">{formatFileSize(file.size)}</span>
                 </div>
               </div>
               <button

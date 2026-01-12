@@ -6,7 +6,6 @@ import { getModel } from '~/lib/.server/llm/model';
 import { MAX_TOKENS } from './constants';
 import { getSystemPrompt } from './prompts';
 import { DEFAULT_MODEL, DEFAULT_PROVIDER, MODEL_LIST, MODEL_REGEX, PROVIDER_REGEX } from '~/utils/constants';
-import { getTools } from './tools';
 
 interface ToolResult<Name extends string, Args, Result> {
   toolCallId: string;
@@ -40,7 +39,7 @@ export type StreamingOptions = Omit<Parameters<typeof _streamText>[0], 'model'>;
 
 function extractPropertiesFromMessage(message: Message): { model: string; provider: string; content: MessageContent } {
   let textContent = '';
-  
+
   // Extract text content from message
   if (typeof message.content === 'string') {
     textContent = message.content;
@@ -62,6 +61,7 @@ function extractPropertiesFromMessage(message: Message): { model: string; provid
 
   // Reconstruct content with cleaned text
   let cleanedContent: MessageContent;
+
   if (typeof message.content === 'string') {
     cleanedContent = cleanedTextContent;
   } else if (Array.isArray(message.content)) {
@@ -69,6 +69,7 @@ function extractPropertiesFromMessage(message: Message): { model: string; provid
       if (part.type === 'text') {
         return { type: 'text', text: cleanedTextContent };
       }
+
       return part;
     });
   } else {
@@ -79,12 +80,12 @@ function extractPropertiesFromMessage(message: Message): { model: string; provid
 }
 
 export function streamText(
-  messages: Messages, 
-  env: Env, 
-  options?: StreamingOptions, 
-  apiKeys?: Record<string, string>, 
+  messages: Messages,
+  env: Env,
+  options?: StreamingOptions,
+  apiKeys?: Record<string, string>,
   mode?: 'build' | 'chat',
-  enableWebSearch?: boolean
+  _enableWebSearch?: boolean,
 ) {
   let currentModel = DEFAULT_MODEL;
   let currentProvider = DEFAULT_PROVIDER;

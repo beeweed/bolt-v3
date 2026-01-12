@@ -17,13 +17,11 @@ import Cookies from 'js-cookie';
 import * as Tooltip from '@radix-ui/react-tooltip';
 import { useStore } from '@nanostores/react';
 import { modeStore, setMode, type Mode } from '~/lib/stores/mode';
-import { FileUpload } from './FileUpload';
+
 import type { FileAttachment } from '~/utils/fileUtils';
 
 import styles from './BaseChat.module.scss';
 import type { ProviderInfo } from '~/utils/types';
-import { ExportChatButton } from '~/components/chat/chatExportAndImport/ExportChatButton';
-import { ImportButtons } from '~/components/chat/chatExportAndImport/ImportButtons';
 import { ExamplePrompts } from '~/components/chat/ExamplePrompts';
 
 // @ts-ignore TODO: Introduce proper types
@@ -87,8 +85,6 @@ interface BaseChatProps {
   sendMessage?: (event: React.UIEvent, messageInput?: string) => void;
   handleInputChange?: (event: React.ChangeEvent<HTMLTextAreaElement>) => void;
   enhancePrompt?: () => void;
-  importChat?: (description: string, messages: Message[]) => Promise<void>;
-  exportChat?: () => void;
   attachedFiles?: FileAttachment[];
   onFilesChange?: (files: FileAttachment[]) => void;
 }
@@ -114,8 +110,6 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
       handleInputChange,
       enhancePrompt,
       handleStop,
-      importChat,
-      exportChat,
       attachedFiles = [],
       onFilesChange,
     },
@@ -129,8 +123,11 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
 
     const handleModeChange = (newMode: Mode) => {
       setMode(newMode);
-      // Save to cookie for server-side access
-      // Only use secure flag on HTTPS (production), default to true for safety
+
+      /*
+       * Save to cookie for server-side access
+       * Only use secure flag on HTTPS (production), default to true for safety
+       */
       const isSecure = typeof window !== 'undefined' ? window.location.protocol === 'https:' : true;
       Cookies.set('bolt_mode', newMode, {
         expires: 30,
@@ -277,7 +274,6 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
                     </button>
                   </div>
 
-
                   <div className={isModelSettingsCollapsed ? 'hidden' : ''}>
                     <ModelSelector
                       key={provider?.name + ':' + modelList.length}
@@ -317,11 +313,7 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
                                 <div className="flex items-center gap-2">
                                   {file.type === 'image' ? (
                                     <div className="w-10 h-10 rounded overflow-hidden bg-bolt-elements-background-depth-3">
-                                      <img
-                                        src={file.data}
-                                        alt={file.name}
-                                        className="w-full h-full object-cover"
-                                      />
+                                      <img src={file.data} alt={file.name} className="w-full h-full object-cover" />
                                     </div>
                                   ) : (
                                     <div className="w-10 h-10 rounded bg-bolt-elements-background-depth-3 flex items-center justify-center text-bolt-elements-textSecondary">
@@ -334,8 +326,14 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
                                     </span>
                                     <span className="text-xs text-bolt-elements-textSecondary">
                                       {((size: number) => {
-                                        if (size < 1024) return `${size} B`;
-                                        if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`;
+                                        if (size < 1024) {
+                                          return `${size} B`;
+                                        }
+
+                                        if (size < 1024 * 1024) {
+                                          return `${(size / 1024).toFixed(1)} KB`;
+                                        }
+
                                         return `${(size / (1024 * 1024)).toFixed(1)} MB`;
                                       })(file.size)}
                                     </span>
@@ -385,7 +383,7 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
                     />
                   </div>
                   <ClientOnly>
-                    {() =>
+                    {() => (
                       <SendButton
                         show={input.length > 0 || attachedFiles.length > 0 || isStreaming}
                         isStreaming={isStreaming}
@@ -398,7 +396,7 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
                           sendMessage?.(event);
                         }}
                       />
-                    }
+                    )}
                   </ClientOnly>
                   <div className="flex justify-between items-center text-sm p-4 pt-2">
                     <div className="flex gap-1 items-center">
@@ -413,7 +411,13 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
                                   const selectedFiles = Array.from(e.target.files || []);
                                   const newFiles: any[] = [];
                                   const MAX_FILE_SIZE = 10 * 1024 * 1024;
-                                  const ACCEPTED_FILE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml'];
+                                  const ACCEPTED_FILE_TYPES = [
+                                    'image/jpeg',
+                                    'image/png',
+                                    'image/gif',
+                                    'image/webp',
+                                    'image/svg+xml',
+                                  ];
 
                                   for (const file of selectedFiles) {
                                     if (file.size > MAX_FILE_SIZE) {
@@ -439,7 +443,7 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
                                         type: file.type.startsWith('image/') ? 'image' : 'file',
                                         data: base64Data,
                                       });
-                                    } catch (error) {
+                                    } catch {
                                       console.error(`Failed to process file ${file.name}`);
                                     }
                                   }
@@ -447,6 +451,7 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
                                   if (newFiles.length > 0) {
                                     onFilesChange([...attachedFiles, ...newFiles]);
                                   }
+
                                   e.target.value = '';
                                 }}
                                 accept="image/jpeg,image/png,image/gif,image/webp,image/svg+xml"
@@ -488,23 +493,26 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
                           </>
                         )}
                       </IconButton>
-                      {chatStarted && <ClientOnly>{() => <ExportChatButton exportChat={exportChat} />}</ClientOnly>}
                     </div>
                     <div className="flex items-center gap-3">
                       <select
                         value={currentMode}
                         onChange={(e) => handleModeChange(e.target.value as Mode)}
                         className="px-2 py-1 rounded-md border border-bolt-elements-borderColor bg-bolt-elements-prompt-background text-bolt-elements-textPrimary text-xs focus:outline-none focus:ring-2 focus:ring-bolt-elements-focus transition-all"
-                        title={currentMode === 'build' ? 'Build Mode: AI creates and updates code' : 'Chat Mode: Ask questions about your project'}
+                        title={
+                          currentMode === 'build'
+                            ? 'Build Mode: AI creates and updates code'
+                            : 'Chat Mode: Ask questions about your project'
+                        }
                       >
                         <option value="build">⚡ Build Mode</option>
                         <option value="chat">💬 Chat Mode</option>
                       </select>
                       {input.length > 3 ? (
                         <div className="text-xs text-bolt-elements-textTertiary">
-                          Use <kbd className="kdb px-1.5 py-0.5 rounded bg-bolt-elements-background-depth-2">Shift</kbd> +{' '}
-                          <kbd className="kdb px-1.5 py-0.5 rounded bg-bolt-elements-background-depth-2">Return</kbd> for
-                          new line
+                          Use <kbd className="kdb px-1.5 py-0.5 rounded bg-bolt-elements-background-depth-2">Shift</kbd>{' '}
+                          + <kbd className="kdb px-1.5 py-0.5 rounded bg-bolt-elements-background-depth-2">Return</kbd>{' '}
+                          for new line
                         </div>
                       ) : null}
                     </div>
@@ -512,7 +520,6 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
                 </div>
               </div>
             </div>
-            {!chatStarted && ImportButtons(importChat)}
             {!chatStarted && ExamplePrompts(sendMessage)}
           </div>
           <ClientOnly>{() => <Workbench chatStarted={chatStarted} isStreaming={isStreaming} />}</ClientOnly>

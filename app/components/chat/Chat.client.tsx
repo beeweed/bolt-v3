@@ -32,19 +32,13 @@ const logger = createScopedLogger('Chat');
 export function Chat() {
   renderLogger.trace('Chat');
 
-  const { ready, initialMessages, storeMessageHistory, importChat, exportChat } = useChatHistory();
+  const { ready, initialMessages, storeMessageHistory } = useChatHistory();
   const title = useStore(description);
 
   return (
     <>
       {ready && (
-        <ChatImpl
-          description={title}
-          initialMessages={initialMessages}
-          exportChat={exportChat}
-          storeMessageHistory={storeMessageHistory}
-          importChat={importChat}
-        />
+        <ChatImpl description={title} initialMessages={initialMessages} storeMessageHistory={storeMessageHistory} />
       )}
       <ToastContainer
         closeButton={({ closeToast }) => {
@@ -80,285 +74,279 @@ export function Chat() {
 interface ChatProps {
   initialMessages: Message[];
   storeMessageHistory: (messages: Message[]) => Promise<void>;
-  importChat: (description: string, messages: Message[]) => Promise<void>;
-  exportChat: () => void;
   description?: string;
 }
 
-export const ChatImpl = memo(
-  ({ description, initialMessages, storeMessageHistory, importChat, exportChat }: ChatProps) => {
-    useShortcuts();
+export const ChatImpl = memo(({ description, initialMessages, storeMessageHistory }: ChatProps) => {
+  useShortcuts();
 
-    const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-    const [chatStarted, setChatStarted] = useState(initialMessages.length > 0);
-    const [model, setModel] = useState(() => {
-      const savedModel = Cookies.get('selectedModel');
-      return savedModel || DEFAULT_MODEL;
-    });
-    const [provider, setProvider] = useState(() => {
-      const savedProvider = Cookies.get('selectedProvider');
-      return PROVIDER_LIST.find((p) => p.name === savedProvider) || DEFAULT_PROVIDER;
-    });
+  const [chatStarted, setChatStarted] = useState(initialMessages.length > 0);
+  const [model, setModel] = useState(() => {
+    const savedModel = Cookies.get('selectedModel');
+    return savedModel || DEFAULT_MODEL;
+  });
+  const [provider, setProvider] = useState(() => {
+    const savedProvider = Cookies.get('selectedProvider');
+    return PROVIDER_LIST.find((p) => p.name === savedProvider) || DEFAULT_PROVIDER;
+  });
 
-    const { showChat } = useStore(chatStore);
+  const { showChat } = useStore(chatStore);
 
-    const [animationScope, animate] = useAnimate();
+  const [animationScope, animate] = useAnimate();
 
-    const [apiKeys, setApiKeys] = useState<Record<string, string>>({});
-    const [attachedFiles, setAttachedFiles] = useState<FileAttachment[]>([]);
+  const [apiKeys, setApiKeys] = useState<Record<string, string>>({});
+  const [attachedFiles, setAttachedFiles] = useState<FileAttachment[]>([]);
 
-    const { messages, isLoading, input, handleInputChange, setInput, stop, append } = useChat({
-      api: '/api/chat',
-      body: {
-        apiKeys,
-      },
-      onError: (error) => {
-        logger.error('Request failed\n\n', error);
-        toast.error(
-          'There was an error processing your request: ' + (error.message ? error.message : 'No details were returned'),
-        );
-      },
-      onFinish: () => {
-        logger.debug('Finished streaming');
-      },
-      initialMessages,
-      initialInput: Cookies.get(PROMPT_COOKIE_KEY) || '',
-    });
+  const { messages, isLoading, input, handleInputChange, setInput, stop, append } = useChat({
+    api: '/api/chat',
+    body: {
+      apiKeys,
+    },
+    onError: (error) => {
+      logger.error('Request failed\n\n', error);
+      toast.error(
+        'There was an error processing your request: ' + (error.message ? error.message : 'No details were returned'),
+      );
+    },
+    onFinish: () => {
+      logger.debug('Finished streaming');
+    },
+    initialMessages,
+    initialInput: Cookies.get(PROMPT_COOKIE_KEY) || '',
+  });
 
-    const { enhancingPrompt, promptEnhanced, enhancePrompt, resetEnhancer } = usePromptEnhancer();
-    const { parsedMessages, parseMessages } = useMessageParser();
+  const { enhancingPrompt, promptEnhanced, enhancePrompt, resetEnhancer } = usePromptEnhancer();
+  const { parsedMessages, parseMessages } = useMessageParser();
 
-    const TEXTAREA_MAX_HEIGHT = chatStarted ? 400 : 200;
+  const TEXTAREA_MAX_HEIGHT = chatStarted ? 400 : 200;
 
-    useEffect(() => {
-      chatStore.setKey('started', initialMessages.length > 0);
-    }, []);
+  useEffect(() => {
+    chatStore.setKey('started', initialMessages.length > 0);
+  }, []);
 
-    useEffect(() => {
-      parseMessages(messages, isLoading);
+  useEffect(() => {
+    parseMessages(messages, isLoading);
 
-      if (messages.length > initialMessages.length) {
-        storeMessageHistory(messages).catch((error) => toast.error(error.message));
-      }
-    }, [messages, isLoading, parseMessages]);
+    if (messages.length > initialMessages.length) {
+      storeMessageHistory(messages).catch((error) => toast.error(error.message));
+    }
+  }, [messages, isLoading, parseMessages]);
 
-    const scrollTextArea = () => {
-      const textarea = textareaRef.current;
+  const scrollTextArea = () => {
+    const textarea = textareaRef.current;
 
-      if (textarea) {
-        textarea.scrollTop = textarea.scrollHeight;
-      }
-    };
+    if (textarea) {
+      textarea.scrollTop = textarea.scrollHeight;
+    }
+  };
 
-    const abort = () => {
-      stop();
-      chatStore.setKey('aborted', true);
-      workbenchStore.abortAllActions();
-    };
+  const abort = () => {
+    stop();
+    chatStore.setKey('aborted', true);
+    workbenchStore.abortAllActions();
+  };
 
-    useEffect(() => {
-      const textarea = textareaRef.current;
+  useEffect(() => {
+    const textarea = textareaRef.current;
 
-      if (textarea) {
-        textarea.style.height = 'auto';
+    if (textarea) {
+      textarea.style.height = 'auto';
 
-        const scrollHeight = textarea.scrollHeight;
+      const scrollHeight = textarea.scrollHeight;
 
-        textarea.style.height = `${Math.min(scrollHeight, TEXTAREA_MAX_HEIGHT)}px`;
-        textarea.style.overflowY = scrollHeight > TEXTAREA_MAX_HEIGHT ? 'auto' : 'hidden';
-      }
-    }, [input, textareaRef]);
+      textarea.style.height = `${Math.min(scrollHeight, TEXTAREA_MAX_HEIGHT)}px`;
+      textarea.style.overflowY = scrollHeight > TEXTAREA_MAX_HEIGHT ? 'auto' : 'hidden';
+    }
+  }, [input, textareaRef]);
 
-    const runAnimation = async () => {
-      if (chatStarted) {
-        return;
-      }
+  const runAnimation = async () => {
+    if (chatStarted) {
+      return;
+    }
 
-      await Promise.all([
-        animate('#examples', { opacity: 0, display: 'none' }, { duration: 0.1 }),
-        animate('#intro', { opacity: 0, flex: 1 }, { duration: 0.2, ease: cubicEasingFn }),
-      ]);
+    await Promise.all([
+      animate('#examples', { opacity: 0, display: 'none' }, { duration: 0.1 }),
+      animate('#intro', { opacity: 0, flex: 1 }, { duration: 0.2, ease: cubicEasingFn }),
+    ]);
 
-      chatStore.setKey('started', true);
+    chatStore.setKey('started', true);
 
-      setChatStarted(true);
-    };
+    setChatStarted(true);
+  };
 
-    const sendMessage = async (_event: React.UIEvent, messageInput?: string) => {
-      const _input = messageInput || input;
+  const sendMessage = async (_event: React.UIEvent, messageInput?: string) => {
+    const _input = messageInput || input;
 
-      if ((_input.length === 0 && attachedFiles.length === 0) || isLoading) {
-        return;
-      }
+    if ((_input.length === 0 && attachedFiles.length === 0) || isLoading) {
+      return;
+    }
 
-      /**
-       * @note (delm) Usually saving files shouldn't take long but it may take longer if there
-       * many unsaved files. In that case we need to block user input and show an indicator
-       * of some kind so the user is aware that something is happening. But I consider the
-       * happy case to be no unsaved files and I would expect users to save their changes
-       * before they send another message.
-       */
-      await workbenchStore.saveAllFiles();
+    /**
+     * @note (delm) Usually saving files shouldn't take long but it may take longer if there
+     * many unsaved files. In that case we need to block user input and show an indicator
+     * of some kind so the user is aware that something is happening. But I consider the
+     * happy case to be no unsaved files and I would expect users to save their changes
+     * before they send another message.
+     */
+    await workbenchStore.saveAllFiles();
 
-      const fileModifications = workbenchStore.getFileModifcations();
+    const fileModifications = workbenchStore.getFileModifcations();
 
-      chatStore.setKey('aborted', false);
+    chatStore.setKey('aborted', false);
 
-      runAnimation();
+    runAnimation();
 
-      // Create message content with files if attached
-      let messageContent;
-      const modelAndProviderPrefix = `[Model: ${model}]\n\n[Provider: ${provider.name}]`;
-      
-      if (attachedFiles.length > 0) {
-        // Create multimodal content with text and images
-        const contentParts = [];
-        
-        // Add text content
-        if (fileModifications !== undefined) {
-          const diff = fileModificationsToHTML(fileModifications);
-          contentParts.push({
-            type: 'text',
-            text: `${modelAndProviderPrefix}\n\n${diff}\n\n${_input}`
-          });
-        } else {
-          contentParts.push({
-            type: 'text',
-            text: `${modelAndProviderPrefix}\n\n${_input}`
-          });
-        }
-        
-        // Add image content (only process image files for vision APIs)
-        attachedFiles.forEach(file => {
-          if (file.type === 'image') {
-            contentParts.push({
-              type: 'image',
-              image: file.data
-            });
-          }
-        });
-        
-        messageContent = contentParts;
-      } else {
-        // Plain text message
-        if (fileModifications !== undefined) {
-          const diff = fileModificationsToHTML(fileModifications);
-          messageContent = `${modelAndProviderPrefix}\n\n${diff}\n\n${_input}`;
-        } else {
-          messageContent = `${modelAndProviderPrefix}\n\n${_input}`;
-        }
-      }
+    // Create message content with files if attached
+    let messageContent;
+    const modelAndProviderPrefix = `[Model: ${model}]\n\n[Provider: ${provider.name}]`;
 
-      append({ role: 'user', content: messageContent as any });
+    if (attachedFiles.length > 0) {
+      // Create multimodal content with text and images
+      const contentParts = [];
 
-      /**
-       * After sending a new message we reset all modifications since the model
-       * should now be aware of all the changes.
-       */
+      // Add text content
       if (fileModifications !== undefined) {
-        workbenchStore.resetAllFileModifications();
+        const diff = fileModificationsToHTML(fileModifications);
+        contentParts.push({
+          type: 'text',
+          text: `${modelAndProviderPrefix}\n\n${diff}\n\n${_input}`,
+        });
+      } else {
+        contentParts.push({
+          type: 'text',
+          text: `${modelAndProviderPrefix}\n\n${_input}`,
+        });
       }
 
-      setInput('');
-      setAttachedFiles([]);
-      Cookies.remove(PROMPT_COOKIE_KEY);
+      // Add image content (only process image files for vision APIs)
+      attachedFiles.forEach((file) => {
+        if (file.type === 'image') {
+          contentParts.push({
+            type: 'image',
+            image: file.data,
+          });
+        }
+      });
 
-      resetEnhancer();
-
-      textareaRef.current?.blur();
-    };
-
-    /**
-     * Handles the change event for the textarea and updates the input state.
-     * @param event - The change event from the textarea.
-     */
-    const onTextareaChange = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
-      handleInputChange(event);
-    };
-
-    /**
-     * Debounced function to cache the prompt in cookies.
-     * Caches the trimmed value of the textarea input after a delay to optimize performance.
-     */
-    const debouncedCachePrompt = useCallback(
-      debounce((event: React.ChangeEvent<HTMLTextAreaElement>) => {
-        const trimmedValue = event.target.value.trim();
-        Cookies.set(PROMPT_COOKIE_KEY, trimmedValue, { expires: 30 });
-      }, 1000),
-      [],
-    );
-
-    const [messageRef, scrollRef] = useSnapScroll();
-
-    useEffect(() => {
-      const storedApiKeys = Cookies.get('apiKeys');
-
-      if (storedApiKeys) {
-        setApiKeys(JSON.parse(storedApiKeys));
+      messageContent = contentParts;
+    } else {
+      // Plain text message
+      if (fileModifications !== undefined) {
+        const diff = fileModificationsToHTML(fileModifications);
+        messageContent = `${modelAndProviderPrefix}\n\n${diff}\n\n${_input}`;
+      } else {
+        messageContent = `${modelAndProviderPrefix}\n\n${_input}`;
       }
-    }, []);
+    }
 
-    const handleModelChange = (newModel: string) => {
-      setModel(newModel);
-      Cookies.set('selectedModel', newModel, { expires: 30 });
-    };
+    append({ role: 'user', content: messageContent as any });
 
-    const handleProviderChange = (newProvider: ProviderInfo) => {
-      setProvider(newProvider);
-      Cookies.set('selectedProvider', newProvider.name, { expires: 30 });
-    };
+    /**
+     * After sending a new message we reset all modifications since the model
+     * should now be aware of all the changes.
+     */
+    if (fileModifications !== undefined) {
+      workbenchStore.resetAllFileModifications();
+    }
 
-    return (
-      <BaseChat
-        ref={animationScope}
-        textareaRef={textareaRef}
-        input={input}
-        showChat={showChat}
-        chatStarted={chatStarted}
-        isStreaming={isLoading}
-        enhancingPrompt={enhancingPrompt}
-        promptEnhanced={promptEnhanced}
-        sendMessage={sendMessage}
-        model={model}
-        setModel={handleModelChange}
-        provider={provider}
-        setProvider={handleProviderChange}
-        messageRef={messageRef}
-        scrollRef={scrollRef}
-        handleInputChange={(e) => {
-          onTextareaChange(e);
-          debouncedCachePrompt(e);
-        }}
-        handleStop={abort}
-        description={description}
-        importChat={importChat}
-        exportChat={exportChat}
-        attachedFiles={attachedFiles}
-        onFilesChange={setAttachedFiles}
-        messages={messages.map((message, i) => {
-          if (message.role === 'user') {
-            return message;
-          }
+    setInput('');
+    setAttachedFiles([]);
+    Cookies.remove(PROMPT_COOKIE_KEY);
 
-          return {
-            ...message,
-            content: parsedMessages[i] || '',
-          };
-        })}
-        enhancePrompt={() => {
-          enhancePrompt(
-            input,
-            (input) => {
-              setInput(input);
-              scrollTextArea();
-            },
-            model,
-            provider,
-            apiKeys,
-          );
-        }}
-      />
-    );
-  },
-);
+    resetEnhancer();
+
+    textareaRef.current?.blur();
+  };
+
+  /**
+   * Handles the change event for the textarea and updates the input state.
+   * @param event - The change event from the textarea.
+   */
+  const onTextareaChange = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
+    handleInputChange(event);
+  };
+
+  /**
+   * Debounced function to cache the prompt in cookies.
+   * Caches the trimmed value of the textarea input after a delay to optimize performance.
+   */
+  const debouncedCachePrompt = useCallback(
+    debounce((event: React.ChangeEvent<HTMLTextAreaElement>) => {
+      const trimmedValue = event.target.value.trim();
+      Cookies.set(PROMPT_COOKIE_KEY, trimmedValue, { expires: 30 });
+    }, 1000),
+    [],
+  );
+
+  const [messageRef, scrollRef] = useSnapScroll();
+
+  useEffect(() => {
+    const storedApiKeys = Cookies.get('apiKeys');
+
+    if (storedApiKeys) {
+      setApiKeys(JSON.parse(storedApiKeys));
+    }
+  }, []);
+
+  const handleModelChange = (newModel: string) => {
+    setModel(newModel);
+    Cookies.set('selectedModel', newModel, { expires: 30 });
+  };
+
+  const handleProviderChange = (newProvider: ProviderInfo) => {
+    setProvider(newProvider);
+    Cookies.set('selectedProvider', newProvider.name, { expires: 30 });
+  };
+
+  return (
+    <BaseChat
+      ref={animationScope}
+      textareaRef={textareaRef}
+      input={input}
+      showChat={showChat}
+      chatStarted={chatStarted}
+      isStreaming={isLoading}
+      enhancingPrompt={enhancingPrompt}
+      promptEnhanced={promptEnhanced}
+      sendMessage={sendMessage}
+      model={model}
+      setModel={handleModelChange}
+      provider={provider}
+      setProvider={handleProviderChange}
+      messageRef={messageRef}
+      scrollRef={scrollRef}
+      handleInputChange={(e) => {
+        onTextareaChange(e);
+        debouncedCachePrompt(e);
+      }}
+      handleStop={abort}
+      description={description}
+      attachedFiles={attachedFiles}
+      onFilesChange={setAttachedFiles}
+      messages={messages.map((message, i) => {
+        if (message.role === 'user') {
+          return message;
+        }
+
+        return {
+          ...message,
+          content: parsedMessages[i] || '',
+        };
+      })}
+      enhancePrompt={() => {
+        enhancePrompt(
+          input,
+          (input) => {
+            setInput(input);
+            scrollTextArea();
+          },
+          model,
+          provider,
+          apiKeys,
+        );
+      }}
+    />
+  );
+});

@@ -13,9 +13,24 @@ const PROVIDER_LIST: ProviderInfo[] = [
   {
     name: 'Anthropic',
     staticModels: [
-      { name: 'claude-sonnet-4-5', label: 'Claude Sonnet 4.5 (Best Coding)', provider: 'Anthropic', maxTokenAllowed: 8000 },
-      { name: 'claude-haiku-4-5', label: 'Claude Haiku 4.5 (Fast & Efficient)', provider: 'Anthropic', maxTokenAllowed: 8000 },
-      { name: 'claude-opus-4-1-20250805', label: 'Claude Opus 4.1 (Deep Reasoning)', provider: 'Anthropic', maxTokenAllowed: 8000 },
+      {
+        name: 'claude-sonnet-4-5',
+        label: 'Claude Sonnet 4.5 (Best Coding)',
+        provider: 'Anthropic',
+        maxTokenAllowed: 8000,
+      },
+      {
+        name: 'claude-haiku-4-5',
+        label: 'Claude Haiku 4.5 (Fast & Efficient)',
+        provider: 'Anthropic',
+        maxTokenAllowed: 8000,
+      },
+      {
+        name: 'claude-opus-4-1-20250805',
+        label: 'Claude Opus 4.1 (Deep Reasoning)',
+        provider: 'Anthropic',
+        maxTokenAllowed: 8000,
+      },
       { name: 'claude-sonnet-4', label: 'Claude Sonnet 4', provider: 'Anthropic', maxTokenAllowed: 8000 },
       { name: 'claude-3-5-sonnet-latest', label: 'Claude 3.5 Sonnet', provider: 'Anthropic', maxTokenAllowed: 8000 },
       { name: 'claude-3-5-haiku-latest', label: 'Claude 3.5 Haiku', provider: 'Anthropic', maxTokenAllowed: 8000 },
@@ -42,7 +57,12 @@ const PROVIDER_LIST: ProviderInfo[] = [
       { name: 'command-a-reasoning', label: 'Command A Reasoning', provider: 'Cohere', maxTokenAllowed: 8000 },
       { name: 'command-r-plus-08-2024', label: 'Command R Plus', provider: 'Cohere', maxTokenAllowed: 4096 },
       { name: 'command-r-08-2024', label: 'Command R', provider: 'Cohere', maxTokenAllowed: 4096 },
-      { name: 'c4ai-aya-expanse-32b', label: 'Aya Expanse 32b (Multilingual)', provider: 'Cohere', maxTokenAllowed: 4096 },
+      {
+        name: 'c4ai-aya-expanse-32b',
+        label: 'Aya Expanse 32b (Multilingual)',
+        provider: 'Cohere',
+        maxTokenAllowed: 4096,
+      },
       { name: 'c4ai-aya-expanse-8b', label: 'Aya Expanse 8b', provider: 'Cohere', maxTokenAllowed: 4096 },
     ],
     getApiKeyLink: 'https://dashboard.cohere.com/api-keys',
@@ -91,9 +111,19 @@ const PROVIDER_LIST: ProviderInfo[] = [
     name: 'Google',
     staticModels: [
       { name: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash', provider: 'Google', maxTokenAllowed: 8192 },
-      { name: 'gemini-2.0-flash-exp', label: 'Gemini 2.0 Flash Experimental', provider: 'Google', maxTokenAllowed: 8192 },
+      {
+        name: 'gemini-2.0-flash-exp',
+        label: 'Gemini 2.0 Flash Experimental',
+        provider: 'Google',
+        maxTokenAllowed: 8192,
+      },
       { name: 'gemini-exp-1206', label: 'Gemini Experimental 1206', provider: 'Google', maxTokenAllowed: 8192 },
-      { name: 'gemini-2.0-flash-thinking-exp', label: 'Gemini 2.0 Flash Thinking', provider: 'Google', maxTokenAllowed: 8192 },
+      {
+        name: 'gemini-2.0-flash-thinking-exp',
+        label: 'Gemini 2.0 Flash Thinking',
+        provider: 'Google',
+        maxTokenAllowed: 8192,
+      },
     ],
     getApiKeyLink: 'https://aistudio.google.com/app/apikey',
   },
@@ -102,8 +132,18 @@ const PROVIDER_LIST: ProviderInfo[] = [
     staticModels: [
       { name: 'llama-3.3-70b-versatile', label: 'Llama 3.3 70b (Latest)', provider: 'Groq', maxTokenAllowed: 8000 },
       { name: 'llama-3.3-70b-specdec', label: 'Llama 3.3 70b (Faster)', provider: 'Groq', maxTokenAllowed: 8000 },
-      { name: 'deepseek-r1-distill-llama-70b', label: 'DeepSeek R1 Llama 70b (Reasoning)', provider: 'Groq', maxTokenAllowed: 8000 },
-      { name: 'deepseek-r1-distill-qwen-32b', label: 'DeepSeek R1 Qwen 32b (Coding)', provider: 'Groq', maxTokenAllowed: 8000 },
+      {
+        name: 'deepseek-r1-distill-llama-70b',
+        label: 'DeepSeek R1 Llama 70b (Reasoning)',
+        provider: 'Groq',
+        maxTokenAllowed: 8000,
+      },
+      {
+        name: 'deepseek-r1-distill-qwen-32b',
+        label: 'DeepSeek R1 Qwen 32b (Coding)',
+        provider: 'Groq',
+        maxTokenAllowed: 8000,
+      },
       { name: 'llama-3.1-8b-instant', label: 'Llama 3.1 8b (Fast)', provider: 'Groq', maxTokenAllowed: 8000 },
       { name: 'llama-3-groq-70b-tool-use', label: 'Llama 3 70b (Tool Use)', provider: 'Groq', maxTokenAllowed: 8000 },
     ],
@@ -202,7 +242,12 @@ const PROVIDER_LIST: ProviderInfo[] = [
     name: 'Deepseek',
     staticModels: [
       { name: 'deepseek-chat-v3.2', label: 'DeepSeek Chat V3.2 (Latest)', provider: 'Deepseek', maxTokenAllowed: 8000 },
-      { name: 'deepseek-chat-v3.1', label: 'DeepSeek Chat V3.1 (Hybrid Reasoning)', provider: 'Deepseek', maxTokenAllowed: 8000 },
+      {
+        name: 'deepseek-chat-v3.1',
+        label: 'DeepSeek Chat V3.1 (Hybrid Reasoning)',
+        provider: 'Deepseek',
+        maxTokenAllowed: 8000,
+      },
       { name: 'deepseek-coder', label: 'DeepSeek Coder', provider: 'Deepseek', maxTokenAllowed: 8000 },
       { name: 'deepseek-chat', label: 'DeepSeek Chat', provider: 'Deepseek', maxTokenAllowed: 8000 },
     ],

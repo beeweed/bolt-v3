@@ -34,7 +34,7 @@ const menuVariants = {
 type DialogContent = { type: 'delete'; item: ChatHistoryItem } | null;
 
 export function Menu() {
-  const { duplicateCurrentChat, exportChat } = useChatHistory();
+  const { duplicateCurrentChat } = useChatHistory();
   const menuRef = useRef<HTMLDivElement>(null);
   const [list, setList] = useState<ChatHistoryItem[]>([]);
   const [open, setOpen] = useState(false);
@@ -175,7 +175,6 @@ export function Menu() {
                   <HistoryItem
                     key={item.id}
                     item={item}
-                    exportChat={exportChat}
                     onDelete={(event) => handleDeleteClick(event, item)}
                     onDuplicate={() => handleDuplicate(item.id)}
                   />

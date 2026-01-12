@@ -46,7 +46,7 @@ async function chatAction({ context, request }: ActionFunctionArgs) {
 
   // Parse the cookie's value (returns an object or null if no cookie exists)
   const apiKeys = JSON.parse(cookies.apiKeys || '{}');
-  
+
   // Get mode from cookies, default to 'build'
   const mode = (cookies.bolt_mode as 'build' | 'chat') || 'build';
 

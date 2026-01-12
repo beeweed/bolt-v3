@@ -9,10 +9,9 @@ interface HistoryItemProps {
   item: ChatHistoryItem;
   onDelete?: (event: React.UIEvent) => void;
   onDuplicate?: (id: string) => void;
-  exportChat: (id?: string) => void;
 }
 
-export function HistoryItem({ item, onDelete, onDuplicate, exportChat }: HistoryItemProps) {
+export function HistoryItem({ item, onDelete, onDuplicate }: HistoryItemProps) {
   const { id: urlId } = useParams();
   const isActiveChat = urlId === item.urlId;
 
@@ -61,14 +60,6 @@ export function HistoryItem({ item, onDelete, onDuplicate, exportChat }: History
             )}
           >
             <div className="flex items-center p-1 text-bolt-elements-textSecondary opacity-0 group-hover:opacity-100 transition-opacity">
-              <ChatActionButton
-                toolTipContent="Export chat"
-                icon="i-ph:download-simple"
-                onClick={(event) => {
-                  event.preventDefault();
-                  exportChat(item.id);
-                }}
-              />
               {onDuplicate && (
                 <ChatActionButton
                   toolTipContent="Duplicate chat"

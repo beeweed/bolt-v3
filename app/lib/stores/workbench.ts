@@ -2,19 +2,14 @@ import { atom, map, type MapStore, type ReadableAtom, type WritableAtom } from '
 import type { EditorDocument, ScrollPosition } from '~/components/editor/codemirror/CodeMirrorEditor';
 import { ActionRunner } from '~/lib/runtime/action-runner';
 import type { ActionCallbackData, ArtifactCallbackData } from '~/lib/runtime/message-parser';
-import { webcontainer } from '~/lib/webcontainer';
-import type { ITerminal } from '~/types/terminal';
 import { unreachable } from '~/utils/unreachable';
 import { EditorStore } from './editor';
 import { FilesStore, type FileMap } from './files';
-import { PreviewsStore } from './previews';
-import { TerminalStore } from './terminal';
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
-import { Octokit, type RestEndpointMethodTypes } from '@octokit/rest';
-import * as nodePath from 'node:path';
 import { extractRelativePath } from '~/utils/diff';
 import { description } from '~/lib/persistence';
+import { WORK_DIR } from '~/utils/constants';
 
 export interface ArtifactState {
   id: string;
@@ -27,13 +22,11 @@ export type ArtifactUpdateState = Pick<ArtifactState, 'title' | 'closed'>;
 
 type Artifacts = MapStore<Record<string, ArtifactState>>;
 
-export type WorkbenchViewType = 'code' | 'preview';
+export type WorkbenchViewType = 'code';
 
 export class WorkbenchStore {
-  #previewsStore = new PreviewsStore(webcontainer);
-  #filesStore = new FilesStore(webcontainer);
+  #filesStore = new FilesStore();
   #editorStore = new EditorStore(this.#filesStore);
-  #terminalStore = new TerminalStore(webcontainer);
 
   artifacts: Artifacts = import.meta.hot?.data.artifacts ?? map({});
 
@@ -43,6 +36,7 @@ export class WorkbenchStore {
   modifiedFiles = new Set<string>();
   artifactIdList: string[] = [];
   #globalExecutionQueue = Promise.resolve();
+
   constructor() {
     if (import.meta.hot) {
       import.meta.hot.data.artifacts = this.artifacts;
@@ -54,10 +48,6 @@ export class WorkbenchStore {
 
   addToExecutionQueue(callback: () => Promise<void>) {
     this.#globalExecutionQueue = this.#globalExecutionQueue.then(() => callback());
-  }
-
-  get previews() {
-    return this.#previewsStore.previews;
   }
 
   get files() {
@@ -80,33 +70,10 @@ export class WorkbenchStore {
     return this.#filesStore.filesCount;
   }
 
-  get showTerminal() {
-    return this.#terminalStore.showTerminal;
-  }
-  get boltTerminal() {
-    return this.#terminalStore.boltTerminal;
-  }
-
-  toggleTerminal(value?: boolean) {
-    this.#terminalStore.toggleTerminal(value);
-  }
-
-  attachTerminal(terminal: ITerminal) {
-    this.#terminalStore.attachTerminal(terminal);
-  }
-  attachBoltTerminal(terminal: ITerminal) {
-    this.#terminalStore.attachBoltTerminal(terminal);
-  }
-
-  onTerminalResize(cols: number, rows: number) {
-    this.#terminalStore.onTerminalResize(cols, rows);
-  }
-
   setDocuments(files: FileMap) {
     this.#editorStore.setDocuments(files);
 
     if (this.#filesStore.filesCount > 0 && this.currentDocument.get() === undefined) {
-      // we find the first file and select it
       for (const [filePath, dirent] of Object.entries(files)) {
         if (dirent?.type === 'file') {
           this.setSelectedFile(filePath);
@@ -227,7 +194,7 @@ export class WorkbenchStore {
   }
 
   abortAllActions() {
-    // TODO: what do we wanna do and how do we wanna recover from this?
+    // No-op in simplified version
   }
 
   addArtifact({ messageId, title, id }: ArtifactCallbackData) {
@@ -245,7 +212,7 @@ export class WorkbenchStore {
       id,
       title,
       closed: false,
-      runner: new ActionRunner(webcontainer, () => this.boltTerminal),
+      runner: new ActionRunner(this.#filesStore),
     });
   }
 
@@ -258,11 +225,11 @@ export class WorkbenchStore {
 
     this.artifacts.setKey(messageId, { ...artifact, ...state });
   }
+
   addAction(data: ActionCallbackData) {
     this._addAction(data);
-
-    // this.addToExecutionQueue(()=>this._addAction(data))
   }
+
   async _addAction(data: ActionCallbackData) {
     const { messageId } = data;
 
@@ -282,6 +249,7 @@ export class WorkbenchStore {
       this.addToExecutionQueue(() => this._runAction(data, isStreaming));
     }
   }
+
   async _runAction(data: ActionCallbackData, isStreaming: boolean = false) {
     const { messageId } = data;
 
@@ -292,14 +260,13 @@ export class WorkbenchStore {
     }
 
     if (data.action.type === 'file') {
-      const wc = await webcontainer;
-      const fullPath = nodePath.join(wc.workdir, data.action.filePath);
+      const fullPath = `${WORK_DIR}/${data.action.filePath}`;
 
-      if (this.selectedFile.value !== fullPath) {
+      if (this.selectedFile.get() !== fullPath) {
         this.setSelectedFile(fullPath);
       }
 
-      if (this.currentView.value !== 'code') {
+      if (this.currentView.get() !== 'code') {
         this.currentView.set('code');
       }
 
@@ -392,115 +359,6 @@ export class WorkbenchStore {
     }
 
     return syncedFiles;
-  }
-
-  async pushToGitHub(repoName: string, githubUsername: string, ghToken: string) {
-    try {
-      // Get the GitHub auth token from environment variables
-      const githubToken = ghToken;
-
-      const owner = githubUsername;
-
-      if (!githubToken) {
-        throw new Error('GitHub token is not set in environment variables');
-      }
-
-      // Initialize Octokit with the auth token
-      const octokit = new Octokit({ auth: githubToken });
-
-      // Check if the repository already exists before creating it
-      let repo: RestEndpointMethodTypes['repos']['get']['response']['data'];
-
-      try {
-        const resp = await octokit.repos.get({ owner, repo: repoName });
-        repo = resp.data;
-      } catch (error) {
-        if (error instanceof Error && 'status' in error && error.status === 404) {
-          // Repository doesn't exist, so create a new one
-          const { data: newRepo } = await octokit.repos.createForAuthenticatedUser({
-            name: repoName,
-            private: false,
-            auto_init: true,
-          });
-          repo = newRepo;
-        } else {
-          console.log('cannot create repo!');
-          throw error; // Some other error occurred
-        }
-      }
-
-      // Get all files
-      const files = this.files.get();
-
-      if (!files || Object.keys(files).length === 0) {
-        throw new Error('No files found to push');
-      }
-
-      // Create blobs for each file
-      const blobs = await Promise.all(
-        Object.entries(files).map(async ([filePath, dirent]) => {
-          if (dirent?.type === 'file' && dirent.content) {
-            const { data: blob } = await octokit.git.createBlob({
-              owner: repo.owner.login,
-              repo: repo.name,
-              content: Buffer.from(dirent.content).toString('base64'),
-              encoding: 'base64',
-            });
-            return { path: extractRelativePath(filePath), sha: blob.sha };
-          }
-
-          return null;
-        }),
-      );
-
-      const validBlobs = blobs.filter(Boolean); // Filter out any undefined blobs
-
-      if (validBlobs.length === 0) {
-        throw new Error('No valid files to push');
-      }
-
-      // Get the latest commit SHA (assuming main branch, update dynamically if needed)
-      const { data: ref } = await octokit.git.getRef({
-        owner: repo.owner.login,
-        repo: repo.name,
-        ref: `heads/${repo.default_branch || 'main'}`, // Handle dynamic branch
-      });
-      const latestCommitSha = ref.object.sha;
-
-      // Create a new tree
-      const { data: newTree } = await octokit.git.createTree({
-        owner: repo.owner.login,
-        repo: repo.name,
-        base_tree: latestCommitSha,
-        tree: validBlobs.map((blob) => ({
-          path: blob!.path,
-          mode: '100644',
-          type: 'blob',
-          sha: blob!.sha,
-        })),
-      });
-
-      // Create a new commit
-      const { data: newCommit } = await octokit.git.createCommit({
-        owner: repo.owner.login,
-        repo: repo.name,
-        message: 'Initial commit from your app',
-        tree: newTree.sha,
-        parents: [latestCommitSha],
-      });
-
-      // Update the reference
-      await octokit.git.updateRef({
-        owner: repo.owner.login,
-        repo: repo.name,
-        ref: `heads/${repo.default_branch || 'main'}`, // Handle dynamic branch
-        sha: newCommit.sha,
-      });
-
-      alert(`Repository created and code pushed: ${repo.html_url}`);
-    } catch (error) {
-      console.error('Error pushing to GitHub:', error instanceof Error ? error.message : String(error));
-    }
   }
 }
 

@@ -20,7 +20,7 @@ function initStore() {
   if (!import.meta.env.SSR) {
     const persistedMode = localStorage.getItem(kMode) as Mode | undefined;
     const validModes: Mode[] = ['build', 'chat'];
-    
+
     if (persistedMode && validModes.includes(persistedMode)) {
       return persistedMode;
     }

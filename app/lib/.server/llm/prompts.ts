@@ -6,7 +6,7 @@ export const getSystemPrompt = (cwd: string = WORK_DIR, mode: 'build' | 'chat' =
   if (mode === 'chat') {
     return getChatModeSystemPrompt();
   }
-  
+
   return `
 You are Bolt, an expert AI assistant and exceptional senior software developer with vast knowledge across multiple programming languages, frameworks, and best practices.
 

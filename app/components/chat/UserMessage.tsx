@@ -21,22 +21,22 @@ export function UserMessage({ content }: UserMessageProps) {
 function sanitizeUserMessage(content: string | Array<{ type: string; text?: string; image?: string }>) {
   // Handle multimodal content (array with text and images)
   if (Array.isArray(content)) {
-    const textPart = content.find(part => part.type === 'text');
+    const textPart = content.find((part) => part.type === 'text');
     const textContent = textPart?.text || '';
-    const imageParts = content.filter(part => part.type === 'image');
-    
+    const imageParts = content.filter((part) => part.type === 'image');
+
     const sanitizedText = textContent
       .replace(modificationsRegex, '')
       .replace(MODEL_REGEX, 'Using: $1')
       .replace(PROVIDER_REGEX, ' ($1)\n\n')
       .trim();
-    
+
     // Add image indicators
     const imageIndicators = imageParts.map((_, index) => `📎 Image ${index + 1}`).join('\n');
-    
+
     return imageIndicators ? `${sanitizedText}\n\n${imageIndicators}` : sanitizedText;
   }
-  
+
   // Handle string content
   return content
     .replace(modificationsRegex, '')
